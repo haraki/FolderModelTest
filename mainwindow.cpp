@@ -1,28 +1,25 @@
-﻿#include <QFileSystemModel>
-#include <QSortFilterProxyModel>
-#include <QDir>
+﻿#include <QDir>
 #include <QDebug>
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
+#include "foldermodel.h"
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
-    ui(new Ui::MainWindow)
+    ui(new Ui::MainWindow),
+    folderModel_(new FolderModel())
 {
     ui->setupUi(this);
 
-    fileSystemModel_ = new QFileSystemModel(this);
-    fileSystemModel_->setRootPath(QDir::homePath());
-    fileSystemModel_->setFilter(QDir::NoDot | QDir::AllDirs | QDir::Files);
+    folderModel_->setRootPath(QDir::homePath());
+    folderModel_->setFilter(QDir::NoDot | QDir::AllDirs | QDir::Files);
+    folderModel_->setDynamicSortFilter(false);
+    folderModel_->setSorting(QDir::Name | QDir::IgnoreCase);
+    folderModel_->setFilterKeyColumn(0);
+    folderModel_->setNameFilterDisables(false);
 
-    sortFilterProxy_ = new QSortFilterProxyModel();
-    sortFilterProxy_->setSourceModel(fileSystemModel_);
-    sortFilterProxy_->setDynamicSortFilter(true);
-    sortFilterProxy_->setSortCaseSensitivity(Qt::CaseInsensitive);
-    sortFilterProxy_->setFilterKeyColumn(0);
-
-    ui->tableView->setModel(sortFilterProxy_);
-    ui->tableView->setRootIndex(sortFilterProxy_->mapFromSource(fileSystemModel_->index(fileSystemModel_->rootPath())));
+    ui->tableView->setModel(folderModel_);
+    ui->tableView->setRootIndex(folderModel_->index(folderModel_->rootPath()));
 
     ui->tableView->horizontalHeader()->setSortIndicator(0, Qt::AscendingOrder);
 }
@@ -34,42 +31,91 @@ MainWindow::~MainWindow()
 
 void MainWindow::on_tableView_doubleClicked(const QModelIndex &index)
 {
-    QModelIndex i = sortFilterProxy_->mapToSource(index);
-    if(!i.isValid())
-    {
-        qDebug() << "invalid.";
-
-        return;
-    }
-
-    if(!fileSystemModel_->isDir(i))
+    if(!folderModel_->isDir(index))
     {
         qDebug() << "not directory.";
 
         return;
     }
 
-    QString path = fileSystemModel_->filePath(i);
+    QString path = folderModel_->filePath(index);
     qDebug() << "dir : " << path;
 
-    ui->tableView->setRootIndex(sortFilterProxy_->mapFromSource(fileSystemModel_->setRootPath(path)));
+    ui->tableView->setRootIndex(folderModel_->setRootPath(path));
 }
 
 void MainWindow::on_caseSensitiveCheckBox_stateChanged(int arg1)
 {
-    if(ui->caseSensitiveCheckBox->isChecked())
+    if(arg1 == Qt::Unchecked)
     {
-        qDebug() << "Case sensitive.";
-        sortFilterProxy_->setSortCaseSensitivity(Qt::CaseSensitive);
+        qDebug() << "Case insensitive.";
+        QDir::SortFlags sorting = folderModel_->sorting();
+        sorting |= QDir::IgnoreCase;
+        folderModel_->setSorting(sorting);
     }
     else
     {
-        qDebug() << "Case insensitive.";
-        sortFilterProxy_->setSortCaseSensitivity(Qt::CaseInsensitive);
+        qDebug() << "Case sensitive.";
+        QDir::SortFlags sorting = folderModel_->sorting();
+        sorting &= ~QDir::IgnoreCase;
+        folderModel_->setSorting(sorting);
     }
 
     if(ui->tableView->horizontalHeader()->sortIndicatorSection() == 0)
     {
-        sortFilterProxy_->sort(0, ui->tableView->horizontalHeader()->sortIndicatorOrder());
+        folderModel_->refresh();
     }
+}
+
+void MainWindow::on_dirsIgnoreRadioButton_clicked()
+{
+    qDebug() << "Dirs ignore.";
+    QDir::SortFlags sorting = folderModel_->sorting();
+    sorting &= ~(QDir::DirsFirst | QDir::DirsLast);
+    folderModel_->setSorting(sorting);
+
+    folderModel_->refresh();
+}
+
+void MainWindow::on_dirsFirstRadioButton_clicked()
+{
+    qDebug() << "Dirs first.";
+    QDir::SortFlags sorting = folderModel_->sorting();
+    sorting &= ~(QDir::DirsFirst | QDir::DirsLast);
+    sorting |= QDir::DirsFirst;
+    folderModel_->setSorting(sorting);
+
+    folderModel_->refresh();
+}
+
+void MainWindow::on_dirsLastRadioButton_clicked()
+{
+    qDebug() << "Dirs last.";
+    QDir::SortFlags sorting = folderModel_->sorting();
+    sorting &= ~(QDir::DirsFirst | QDir::DirsLast);
+    sorting |= QDir::DirsLast;
+    folderModel_->setSorting(sorting);
+
+    folderModel_->refresh();
+}
+
+void MainWindow::on_dotFirstCheckBox_stateChanged(int arg1)
+{
+    if(arg1 == Qt::Unchecked)
+    {
+        qDebug() << "Dot isn't first.";
+        folderModel_->setDotFirst(false);
+    }
+    else
+    {
+        qDebug() << "Dot is first.";
+        folderModel_->setDotFirst(true);
+    }
+
+    folderModel_->refresh();
+}
+
+void MainWindow::on_filterLineEdit_textEdited(const QString &arg1)
+{
+    folderModel_->setNameFilters(arg1.split(','));
 }
