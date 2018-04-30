@@ -1,0 +1,2 @@
+# FolderModelTest
+QFileSystemModel と QSortFilterProxyModel を組み合わせた FolderModel のテストプログラム
