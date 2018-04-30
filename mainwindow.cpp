@@ -119,3 +119,19 @@ void MainWindow::on_filterLineEdit_textEdited(const QString &arg1)
 {
     folderModel_->setNameFilters(arg1.split(','));
 }
+
+void MainWindow::on_showHiddenCheckBox_stateChanged(int arg1)
+{
+    QDir::Filters filters = folderModel_->filter();
+    if(arg1 == Qt::Unchecked)
+    {
+        qDebug() << "Don't show hidden file.";
+        filters &= ~QDir::Hidden;
+    }
+    else
+    {
+        qDebug() << "Show hidden file.";
+        filters |= QDir::Hidden;
+    }
+    folderModel_->setFilter(filters);
+}

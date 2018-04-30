@@ -32,10 +32,17 @@
      <layout class="QHBoxLayout" name="horizontalLayout">
       <item>
        <layout class="QGridLayout" name="gridLayout">
-        <item row="2" column="1">
+        <item row="0" column="0" colspan="2">
+         <widget class="QCheckBox" name="caseSensitiveCheckBox">
+          <property name="text">
+           <string>Case sensitive</string>
+          </property>
+         </widget>
+        </item>
+        <item row="5" column="1">
          <widget class="QLineEdit" name="filterLineEdit"/>
         </item>
-        <item row="2" column="0">
+        <item row="5" column="0">
          <widget class="QLabel" name="filterLabel">
           <property name="text">
            <string>Filter :</string>
@@ -52,10 +59,10 @@
           </property>
          </widget>
         </item>
-        <item row="0" column="0" colspan="2">
-         <widget class="QCheckBox" name="caseSensitiveCheckBox">
+        <item row="2" column="0" colspan="2">
+         <widget class="QCheckBox" name="showHiddenCheckBox">
           <property name="text">
-           <string>Case sensitive</string>
+           <string>Show hidden</string>
           </property>
          </widget>
         </item>
