@@ -2,6 +2,7 @@
 #define FOLDERMODEL_H
 
 #include <QSortFilterProxyModel>
+#include <QDir>
 
 class QFileSystemModel;
 class QFileIconProvider;
@@ -14,6 +15,16 @@ public:
 
     using QSortFilterProxyModel::index;
     QModelIndex index(const QString &path, int column = 0) const;
+
+    void setSorting(QDir::SortFlags sort);
+    QDir::SortFlags sorting() const;
+
+    void setDotFirst(bool enable);
+    bool dotFirst();
+
+    void sort(int column, Qt::SortOrder order = Qt::AscendingOrder) Q_DECL_OVERRIDE;
+
+    void refresh();
 
     // QFileSystemModel specific API
     QModelIndex setRootPath(const QString &path);
@@ -53,7 +64,16 @@ public:
     bool remove(const QModelIndex &index);
 
 private:
+    bool lessThan(const QModelIndex &source_left, const QModelIndex &source_right) const Q_DECL_OVERRIDE;
+
+    // don't use
+    Qt::CaseSensitivity sortCaseSensitivity() const;
+    void setSortCaseSensitivity(Qt::CaseSensitivity cs);
+
     QFileSystemModel* fsModel_;
+    QDir::SortFlags sortFlags_;
+    Qt::SortOrder sortOrder_;
+    bool dotFirst_;
 };
 
 #endif // FOLDERMODEL_H
