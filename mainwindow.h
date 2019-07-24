@@ -34,6 +34,8 @@ private slots:
 
     void on_showHiddenCheckBox_stateChanged(int arg1);
 
+    void on_storageComboBox_currentIndexChanged(int index);
+
 private:
     Ui::MainWindow *ui;
 

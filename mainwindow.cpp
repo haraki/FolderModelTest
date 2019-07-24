@@ -1,5 +1,6 @@
 ﻿#include <QDir>
 #include <QDebug>
+#include <QStorageInfo>
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "foldermodel.h"
@@ -11,7 +12,32 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
 
-    folderModel_->setRootPath(QDir::homePath());
+    for(const QStorageInfo& volume : QStorageInfo::mountedVolumes())
+    {
+        qDebug() << "Name : " << volume.name();
+        qDebug() << "Display Name : " << volume.displayName();
+        qDebug() << "Device:" << volume.device();
+        qDebug() << "Root path:" << volume.rootPath();
+        qDebug() << "File system type:" << volume.fileSystemType();
+        qDebug() << "Is valid" << volume.isValid();
+        qDebug() << "Is root" << volume.isRoot();
+        qDebug() << "Is ready" << volume.isReady();
+        qDebug() << "Is read only" << volume.isReadOnly();
+        qDebug() << QString("Bytes available: %L1 Bytes").arg(volume.bytesAvailable());
+        qDebug() << QString("Bytes free: %L1 Bytes").arg(volume.bytesFree());
+        qDebug() << QString("Bytes total: %L1 Bytes").arg(volume.bytesTotal()) << endl;
+
+        if(volume.isValid() && volume.isReady()
+#ifdef Q_OS_LINUX
+            && (volume.isRoot() || volume.rootPath().startsWith("/media"))
+#endif
+          )
+        {
+            ui->storageComboBox->addItem(volume.rootPath());
+        }
+    }
+
+    folderModel_->setRootPath(ui->storageComboBox->itemText(0));
     folderModel_->setFilter(QDir::NoDot | QDir::AllDirs | QDir::Files);
     folderModel_->setDynamicSortFilter(false);
     folderModel_->setSorting(QDir::Name | QDir::IgnoreCase);
@@ -134,4 +160,11 @@ void MainWindow::on_showHiddenCheckBox_stateChanged(int arg1)
         filters |= QDir::Hidden;
     }
     folderModel_->setFilter(filters);
+}
+
+void MainWindow::on_storageComboBox_currentIndexChanged(int index)
+{
+    folderModel_->setRootPath(ui->storageComboBox->itemText(index));
+
+    ui->tableView->setRootIndex(folderModel_->index(folderModel_->rootPath()));
 }

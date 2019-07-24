@@ -148,8 +148,6 @@ bool FolderModel::lessThan(const QModelIndex &source_left, const QModelIndex &so
             return l_info.fileName() < r_info.fileName();
         }
     }
-
-    return false;
 }
 
 // QFileSystemModel specific API
