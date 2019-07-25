@@ -2,12 +2,16 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QAbstractItemModel>
 
 namespace Ui {
 class MainWindow;
 }
 
-class FolderModel;
+namespace Farman
+{
+    class FolderModel;
+}
 
 class MainWindow : public QMainWindow
 {
@@ -36,10 +40,14 @@ private slots:
 
     void on_storageComboBox_currentIndexChanged(int index);
 
+private Q_SLOTS:
+    void onDirectoryLoaded(const QString& path);
+    void onLayoutChanged(const QList<QPersistentModelIndex> &parents = QList<QPersistentModelIndex>(), QAbstractItemModel::LayoutChangeHint hint = QAbstractItemModel::NoLayoutChangeHint);
+
 private:
     Ui::MainWindow *ui;
 
-    FolderModel* folderModel_ = Q_NULLPTR;
+    Farman::FolderModel* folderModel_ = Q_NULLPTR;
 };
 
 #endif // MAINWINDOW_H

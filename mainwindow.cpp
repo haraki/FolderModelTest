@@ -5,12 +5,23 @@
 #include "ui_mainwindow.h"
 #include "foldermodel.h"
 
+using namespace Farman;
+
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow),
     folderModel_(new FolderModel())
 {
     ui->setupUi(this);
+
+    connect(folderModel_,
+            SIGNAL(directoryLoaded(const QString&)),
+            this,
+            SLOT(onDirectoryLoaded(const QString&)));
+//    connect(folderModel_,
+//            SIGNAL(layoutChanged(const QList<QPersistentModelIndex>&, QAbstractItemModel::LayoutChangeHint)),
+//            this,
+//            SLOT(onLayoutChanged(const QList<QPersistentModelIndex>&, QAbstractItemModel::LayoutChangeHint)));
 
     for(const QStorageInfo& volume : QStorageInfo::mountedVolumes())
     {
@@ -37,17 +48,18 @@ MainWindow::MainWindow(QWidget *parent) :
         }
     }
 
-    folderModel_->setRootPath(ui->storageComboBox->itemText(0));
-    folderModel_->setFilter(QDir::NoDot | QDir::AllDirs | QDir::Files);
+    folderModel_->setFilterFlags(FilterFlag::System);
     folderModel_->setDynamicSortFilter(false);
-    folderModel_->setSorting(QDir::Name | QDir::IgnoreCase);
+    folderModel_->setSortSectionType(SectionType::FileName);
+    folderModel_->setSortCaseSensitivity(Qt::CaseInsensitive);
     folderModel_->setFilterKeyColumn(0);
     folderModel_->setNameFilterDisables(false);
 
     ui->tableView->setModel(folderModel_);
-    ui->tableView->setRootIndex(folderModel_->index(folderModel_->rootPath()));
 
     ui->tableView->horizontalHeader()->setSortIndicator(0, Qt::AscendingOrder);
+
+    folderModel_->setRootPath(ui->storageComboBox->itemText(0));
 }
 
 MainWindow::~MainWindow()
@@ -67,7 +79,7 @@ void MainWindow::on_tableView_doubleClicked(const QModelIndex &index)
     QString path = folderModel_->filePath(index);
     qDebug() << "dir : " << path;
 
-    ui->tableView->setRootIndex(folderModel_->setRootPath(path));
+    folderModel_->setRootPath(path);
 }
 
 void MainWindow::on_caseSensitiveCheckBox_stateChanged(int arg1)
@@ -75,16 +87,12 @@ void MainWindow::on_caseSensitiveCheckBox_stateChanged(int arg1)
     if(arg1 == Qt::Unchecked)
     {
         qDebug() << "Case insensitive.";
-        QDir::SortFlags sorting = folderModel_->sorting();
-        sorting |= QDir::IgnoreCase;
-        folderModel_->setSorting(sorting);
+        folderModel_->setSortCaseSensitivity(Qt::CaseInsensitive);
     }
     else
     {
         qDebug() << "Case sensitive.";
-        QDir::SortFlags sorting = folderModel_->sorting();
-        sorting &= ~QDir::IgnoreCase;
-        folderModel_->setSorting(sorting);
+        folderModel_->setSortCaseSensitivity(Qt::CaseSensitive);
     }
 
     if(ui->tableView->horizontalHeader()->sortIndicatorSection() == 0)
@@ -96,9 +104,7 @@ void MainWindow::on_caseSensitiveCheckBox_stateChanged(int arg1)
 void MainWindow::on_dirsIgnoreRadioButton_clicked()
 {
     qDebug() << "Dirs ignore.";
-    QDir::SortFlags sorting = folderModel_->sorting();
-    sorting &= ~(QDir::DirsFirst | QDir::DirsLast);
-    folderModel_->setSorting(sorting);
+    folderModel_->setSortDirsType(SortDirsType::NoSpecify);
 
     folderModel_->refresh();
 }
@@ -106,10 +112,7 @@ void MainWindow::on_dirsIgnoreRadioButton_clicked()
 void MainWindow::on_dirsFirstRadioButton_clicked()
 {
     qDebug() << "Dirs first.";
-    QDir::SortFlags sorting = folderModel_->sorting();
-    sorting &= ~(QDir::DirsFirst | QDir::DirsLast);
-    sorting |= QDir::DirsFirst;
-    folderModel_->setSorting(sorting);
+    folderModel_->setSortDirsType(SortDirsType::First);
 
     folderModel_->refresh();
 }
@@ -117,10 +120,7 @@ void MainWindow::on_dirsFirstRadioButton_clicked()
 void MainWindow::on_dirsLastRadioButton_clicked()
 {
     qDebug() << "Dirs last.";
-    QDir::SortFlags sorting = folderModel_->sorting();
-    sorting &= ~(QDir::DirsFirst | QDir::DirsLast);
-    sorting |= QDir::DirsLast;
-    folderModel_->setSorting(sorting);
+    folderModel_->setSortDirsType(SortDirsType::Last);
 
     folderModel_->refresh();
 }
@@ -130,12 +130,12 @@ void MainWindow::on_dotFirstCheckBox_stateChanged(int arg1)
     if(arg1 == Qt::Unchecked)
     {
         qDebug() << "Dot isn't first.";
-        folderModel_->setDotFirst(false);
+        folderModel_->setSortDotFirst(false);
     }
     else
     {
         qDebug() << "Dot is first.";
-        folderModel_->setDotFirst(true);
+        folderModel_->setSortDotFirst(true);
     }
 
     folderModel_->refresh();
@@ -148,23 +148,38 @@ void MainWindow::on_filterLineEdit_textEdited(const QString &arg1)
 
 void MainWindow::on_showHiddenCheckBox_stateChanged(int arg1)
 {
-    QDir::Filters filters = folderModel_->filter();
+    FilterFlags filters = folderModel_->getFilterFlags();
     if(arg1 == Qt::Unchecked)
     {
         qDebug() << "Don't show hidden file.";
-        filters &= ~QDir::Hidden;
+        filters &= ~static_cast<uint>(FilterFlag::Hidden);
     }
     else
     {
         qDebug() << "Show hidden file.";
-        filters |= QDir::Hidden;
+        filters |= FilterFlag::Hidden;
     }
-    folderModel_->setFilter(filters);
+    folderModel_->setFilterFlags(filters);
 }
 
 void MainWindow::on_storageComboBox_currentIndexChanged(int index)
 {
     folderModel_->setRootPath(ui->storageComboBox->itemText(index));
-
-    ui->tableView->setRootIndex(folderModel_->index(folderModel_->rootPath()));
 }
+
+void MainWindow::onDirectoryLoaded(const QString& path)
+{
+    qDebug() << "directory loaded." << path;
+
+    QModelIndex newRootIndex = folderModel_->index(path);
+
+    ui->tableView->setRootIndex(newRootIndex);
+}
+
+void MainWindow::onLayoutChanged(const QList<QPersistentModelIndex> &parents/* = QList<QPersistentModelIndex>()*/, QAbstractItemModel::LayoutChangeHint hint/* = QAbstractItemModel::NoLayoutChangeHint*/)
+{
+    qDebug() << "onLayoutChanged() parents : " << parents << ", hint : " << hint;
+
+
+}
+

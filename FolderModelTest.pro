@@ -26,11 +26,15 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += \
         main.cpp \
         mainwindow.cpp \
-    foldermodel.cpp
+    foldermodel.cpp \
+    win32.cpp
 
 HEADERS += \
         mainwindow.h \
-    foldermodel.h
+    foldermodel.h \
+    misc.h \
+    types.h \
+    win32.h
 
 FORMS += \
         mainwindow.ui
